@@ -1,29 +1,59 @@
 --- a/AppRun.c
-+++ b/AppRun.c
-@@ -164,6 +164,10 @@
++++ b/AppRun.c.new
+@@ -164,6 +164,9 @@
      char *old_env;
      size_t length;
      const char *format;
 +    checkrt(usr_in_appdir);
-+
 +    if (optional_ld_preload)
 +        putenv(optional_ld_preload);
  
      /* https://docs.python.org/2/using/cmdline.html#envvar-PYTHONHOME */
      SET_NEW_ENV(new_pythonhome, appdir_s, "PYTHONHOME=%s/usr/", appdir);
-@@ -172,7 +176,7 @@
+@@ -171,8 +174,38 @@
+     old_env = getenv("PATH") ?: "";
      SET_NEW_ENV(new_path, appdir_s*5 + strlen(old_env), "PATH=%s/usr/bin/:%s/usr/sbin/:%s/usr/games/:%s/bin/:%s/sbin/:%s", appdir, appdir, appdir, appdir, appdir, old_env);
  
++    int isUbuntu1404 = 0;
++    FILE *fp = popen("/usr/bin/lsb_release -rcs", "r");
++    if (fp != NULL)
++    {
++        char version[1035];
++        fgets(version, sizeof(version), fp);
++        char codename[1035];
++        fgets(codename, sizeof(codename), fp);
++        printf("version: %s, codename: %s", version, codename);
++        if (strcmp(version, "14.04") == 0 && strcmp(codename, "14.04") == 0)
++        {
++           printf("All is good");
++           isUbuntu1404 = 1;
++        }
++        else
++        {
++           printf("failed: %d, %d", strcmp(version, "14.04"), strcmp(codename, "14.04"));
++        }
++        
++    }
      old_env = getenv("LD_LIBRARY_PATH") ?: "";
 -    SET_NEW_ENV(new_ld_library_path, appdir_s*10 + strlen(old_env), "LD_LIBRARY_PATH=%s/usr/lib/:%s/usr/lib/i386-linux-gnu/:%s/usr/lib/x86_64-linux-gnu/:%s/usr/lib32/:%s/usr/lib64/:%s/lib/:%s/lib/i386-linux-gnu/:%s/lib/x86_64-linux-gnu/:%s/lib32/:%s/lib64/:%s", appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, old_env);
-+    SET_NEW_ENV(new_ld_library_path, strlen(optional_ld_library_path) + appdir_s*10 + strlen(old_env), "LD_LIBRARY_PATH=%s%s/usr/lib/:%s/usr/lib/i386-linux-gnu/:%s/usr/lib/x86_64-linux-gnu/:%s/usr/lib32/:%s/usr/lib64/:%s/lib/:%s/lib/i386-linux-gnu/:%s/lib/x86_64-linux-gnu/:%s/lib32/:%s/lib64/:%s", optional_ld_library_path, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, old_env);
-
++    SET_NEW_ENV(new_ld_library_path, appdir_s*10 + strlen(old_env),                                    "LD_LIBRARY_PATH=%s/usr/lib/:%s/usr/lib/i386-linux-gnu/:%s/usr/lib/x86_64-linux-gnu/:%s/usr/lib32/:%s/usr/lib64/:%s/lib/:%s/lib/i386-linux-gnu/:%s/lib/x86_64-linux-gnu/:%s/lib32/:%s/lib64/:%s",                             appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, old_env);
++    if (isUbuntu1404)
++    {
++        printf("this is ubuntu 14.04! *kicks off ledge*");
++        SET_NEW_ENV(new_ld_library_path, strlen(optional_ld_library_path) + appdir_s*10 + strlen(old_env), "LD_LIBRARY_PATH=%s%s/usr/lib/:%s/usr/lib/i386-linux-gnu/:%s/usr/lib/x86_64-linux-gnu/:%s/usr/lib32/:%s/usr/lib64/:%s/lib/:%s/lib/i386-linux-gnu/:%s/lib/x86_64-linux-gnu/:%s/lib32/:%s/lib64/:%s", optional_ld_library_path, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, old_env);
++    }
++    else
++    {
++        printf("this is not ubuntu.");
++        SET_NEW_ENV(new_ld_library_path, appdir_s*10 + strlen(old_env),                                    "LD_LIBRARY_PATH=%s/usr/lib/:%s/usr/lib/i386-linux-gnu/:%s/usr/lib/x86_64-linux-gnu/:%s/usr/lib32/:%s/usr/lib64/:%s/lib/:%s/lib/i386-linux-gnu/:%s/lib/x86_64-linux-gnu/:%s/lib32/:%s/lib64/:%s",                             appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, appdir, old_env);
++    }
+ 
      old_env = getenv("PYTHONPATH") ?: "";
      SET_NEW_ENV(new_pythonpath, appdir_s + strlen(old_env), "PYTHONPATH=%s/usr/share/pyshared/:%s", appdir, old_env);
-@@ -201,6 +205,9 @@
+@@ -201,6 +234,9 @@
      if (ret == -1)
          die("Error executing '%s': %s\n", exe, strerror(error));
-
+ 
 +    free(optional_ld_library_path);
 +    if (optional_ld_preload)
 +        free(optional_ld_preload);
